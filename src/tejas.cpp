@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <vector>
+#include <bitset>
 
 const uint32_t IMEM_OFFSET = 0x10000000;
 const uint32_t IMEM_LENGTH = 0x1000000;
@@ -30,7 +31,7 @@ int main(int argc, char *argv[]) {
 
   try {
 
-    binStream.open("file.bin", std::ios::binary | std::ios::in);
+    binStream.open("assebly.mips.bin", std::ios::binary | std::ios::in);
     binStream.seekg (0, std::ios::end);
     std::streampos size = binStream.tellg();
     sizeI = size;
@@ -47,13 +48,20 @@ int main(int argc, char *argv[]) {
     std::cerr << "Input file does not exist" << std::endl;
   }
 
-  std::string instructions[sizeI/WORD_LENGTH];
 
-  for (int i; i < sizeI; i++){
-    instructions[i / WORD_LENGTH] += memblock[i];
+  uint32_t instructions[sizeI/4] = {0};
+
+  for (int i = 0; i < sizeI; i++){
+    uint32_t tmp = static_cast<uint32_t>(memblock[i]) << 8 * (3-(i%4));
+    instructions[i / 4] += tmp;
   }
 
-  find_instr(instructions[0], registers);
+  for (int i = 0; i < sizeI/4; i++) {
+    std::cerr << std::bitset<32>(instructions[i]) << std::endl;
+  }
+
+  //find_instr(instructions[0], registers);
+
   // while (1) {
   //   uint32_t instruction;
   //   if (pc == 0) {
