@@ -12,6 +12,7 @@ void find_instr(const std::string &instr, uint32_t reg[]);
 void addu(const std::string &instr, uint32_t reg[]);
 void subu(const std::string &instr, uint32_t reg[]);
 void mul(const std::string &instr, uint32_t reg[]);
+void jr(const uint32_t &instr,uint32_t& pc, uint32_t reg[]);
 
 int main(int argc, char *argv[]) {
 
@@ -22,7 +23,7 @@ int main(int argc, char *argv[]) {
   data_mem.resize(0x4000000);
 
   uint32_t registers[32] = {0};
-  uint32_t pc = IMEM_OFFSET;
+  uint32_t pc = 0;
 
   char memblock[100];
   int sizeI = 0;
@@ -59,6 +60,14 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < sizeI/4; i++) {
     std::cerr << std::bitset<32>(instr_mem[i]) << std::endl;
   }
+
+  //just testing ignore/delete this
+  registers[21] = 0x10000004;
+  registers[20] = 0x10000008;
+  registers[22] = 0x1000000C;
+  jr(0b00000010110000000000000000001000, pc, registers);
+  
+  std::cerr<< "PC is: "<<pc<<std::endl;
 
   //find_instr(instructions[0], registers);
 
@@ -150,4 +159,19 @@ void mul(const std::string &instr, uint32_t reg[]) {
   reg[std::stoi(dest, nullptr, 2)] = reg[std::stoi(r1, nullptr, 2)] * reg[std::stoi(r2, nullptr, 2)];
   // std::cerr << std::stoi(dest, nullptr, 2) << " = " << std::stoi(r1, nullptr, 2) << " * " << std::stoi(r2, nullptr, 2) << std::endl;
   // std::cerr << reg[10] << std::endl;
+}
+
+void jr(const uint32_t &instr,uint32_t& pc, uint32_t reg[]){
+    //000000 rs 0x15 001000
+    int target  = reg[0x1F&(instr  >> 21)] - IMEM_OFFSET;
+    //target is the memory location - the instruction memory offset
+    if(target < 0 || target > IMEM_LENGTH){
+      std::cerr << "This should be an error message?"<<std::endl;
+    }
+    else{
+      pc = (target/4);
+    }
+    std::cerr << "This is the target reg: "<< std::bitset<32>(target)<<std::endl;
+ 
+
 }
