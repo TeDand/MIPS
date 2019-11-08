@@ -9,9 +9,14 @@ const uint32_t IMEM_LENGTH = 0x1000000;
 const int WORD_LENGTH = 32;
 
 void find_instr(const uint32_t &instr, uint32_t reg[], uint32_t &pc);
+
 void do_rType(const uint32_t &instr, uint32_t reg[], uint32_t &pc);
+void do_iType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, std::vector<uint32_t> &instr_mem, std::vector<uint32_t> &data_mem);
 void do_jType(const uint32_t &instr, uint32_t reg[], uint32_t &pc);
+
 void decode_rType(const uint32_t &instr, int &r1, int &r2, int &dest, int &shft);
+void decode_iType(const uint32_t &instr, int &r1, int &r2, int &imm);
+
 int sll(const int &r2, const int &shft);
 int srl(const int &r2, const int &shft);
 int sra(const int &r2, const int &shft);
@@ -37,6 +42,9 @@ int xor(const int &r1, const int &r2);
 int nor(const int &r1, const int &r2);
 int slt(const int &r1, const int &r2);
 int sltu(const int &r1, const int &r2);
+
+int lw(const int &r1, const int &imm, std::vector<uint32_t> &instr_mem, std::vector<uint32_t> &data_mem);
+void sw(const int &r1, const int &r2, const int &imm, std::vector<uint32_t> &data_mem);
 
 int main(int argc, char *argv[]) {
 
@@ -232,6 +240,22 @@ void do_rType(const uint32_t &instr, uint32_t reg[], uint32_t &pc) {
 
 }
 
+void do_iType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, std::vector<uint32_t> &instr_mem, std::vector<uint32_t> &data_mem) {
+  int r1, r2, imm;
+  uint32_t op = (instr >> 26) & 0b111111;
+
+  decode_iType(instr, r1, r2, imm);
+
+  if (op == 0b100011) {
+    std::cerr << "lw" << std::endl;
+    reg[r2] = lw(reg[r1], imm, instr_mem, data_mem);
+  }
+  else if (op == 0b101011) {
+    std::cerr << "sw" << std::endl;
+    sw(reg[r1], reg[r2], imm, data_mem);
+  }
+}
+
 void decode_rType(const uint32_t &instr, int &r1, int &r2, int &dest, int &shft) {
   uint32_t mask = 0b11111;
 
@@ -240,6 +264,15 @@ void decode_rType(const uint32_t &instr, int &r1, int &r2, int &dest, int &shft)
   r2 = (instr >> 16) & mask;
   r1 = (instr >> 21) & mask;
 
+}
+
+void decode_iType(const uint32_t &instr, int &r1, int &r2, int &imm) {
+  uint32_t mask = 0b11111;
+  uint32_t mask2 = 0b1111111111111111;
+
+  imm = instr & mask2;
+  r2 = (instr >> 16) & mask;
+  r1 = (instr >> 21) & mask;
 }
 
 int sll(const int &r2, const int &shft) { // logical shift left
@@ -374,4 +407,12 @@ int sltu(const int &r1, const int &r2) {
   else {
     return 0;
   }
+}
+
+int lw(const int &r1, const int &imm, std::vector<uint32_t> &instr_mem, std::vector<uint32_t> &data_mem) {
+  return 0;
+}
+
+void sw(const int &r1, const int &r2, const int &imm, std::vector<uint32_t> &data_mem) {
+
 }
