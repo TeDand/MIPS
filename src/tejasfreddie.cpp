@@ -10,7 +10,7 @@ const uint32_t DATA_OFFSET = 0x20000000;
 const uint32_t DATA_LENGTH =  0x4000000;
 const int WORD_LENGTH = 32;
 
-void find_instr(const uint32_t &instr, uint32_t reg[], uint32_t &pc, bool& isDelay);
+void find_instr(const uint32_t &instr, uint32_t reg[], uint32_t &pc, bool& isDelay, std::vector<uint32_t> &instr_mem, std::vector<uint32_t> &data_mem);
 
 
 void do_rType(const uint32_t &instr, uint32_t reg[], uint32_t &pc);
@@ -57,21 +57,24 @@ int main(int argc, char *argv[]) {
   std::vector<uint32_t> data_mem;
   data_mem.resize(0x4000000 / 4);
 
+  std::fill(instr_mem.begin(), instr_mem.end(), 0);
+  std::fill(data_mem.begin(), data_mem.end(), 0);
+
   uint32_t registers[34] = {0}; // 32 general purpose registers followed by; HI, LO
   uint32_t pc = 0;
 
-  //char memblock[100]; 
+  //char memblock[100];
   int sizeI = 0;
 
 
   //putting testing here as not reading from file
-  data_mem[0]= 0xF0F0F0F0;
-  data_mem[1] = 0xFFFF0000;
-  data_mem[2] = 0xFFFF;
-  registers[1] = 0x20000000;
-  registers[2] = 0x20000004;
-  registers[3] = 0xF;
-  std::cerr<< std::endl;
+  // data_mem[0]= 0xF0F0F0F0;
+  // data_mem[1] = 0xFFFF0000;
+  // data_mem[2] = 0xFFFF;
+  // registers[1] = 0x20000000;
+  // registers[2] = 0x20000004;
+  // registers[3] = 0xF;
+  // std::cerr<< std::endl;
  /* std::cerr << "Start by storing first word of data addressed by r1 into r4"<<std::endl;
   registers[4] = lw(registers[1],0, instr_mem,data_mem);
   std::cerr << "r4 is now: "<<std::bitset<32>(registers[4])<<std::endl;
@@ -99,22 +102,17 @@ int main(int argc, char *argv[]) {
   std::cerr<<"data 0 should be: "<<std::bitset<32>(registers[3])<<std::endl;
   std::cerr<< std::endl;*/
 
-  
+
   std::ifstream binStream;
 
   char* binmen = new char[IMEM_LENGTH];
-  //char binmen[100];
+
   try {
-    binStream.open("assebly.mips.bin", std::ios_base::binary | std::ios_base::in | std::ios_base::ate);
-    std::cout << binStream.is_open() << std::endl;
+    binStream.open(argv[1], std::ios_base::binary | std::ios_base::in | std::ios_base::ate);
     std::streampos size = binStream.tellg();
     sizeI = size;
     binStream.seekg (0, std::ios::beg);
-      std::cerr<<"got here"<<std::endl;
-   // while (!binStream.eof()) {
-      binStream.read(binmen, size);
-    //}
-    std::cerr<<"got there"<<std::endl;
+    binStream.read(binmen, size);
     binStream.close();
     binStream.clear();
   }
@@ -122,7 +120,7 @@ int main(int argc, char *argv[]) {
     exit(-21); //no input file - exited with error
     std::cerr << "Input file does not exist" << std::endl;
   }
-  
+
   for (int i = 0; i < sizeI; i++){
     uint32_t tmp = static_cast<uint32_t>(binmen[i]) << 8 * (3-(i%4));
     instr_mem[i / 4] += tmp;
@@ -130,15 +128,15 @@ int main(int argc, char *argv[]) {
 
   delete(binmen);
 
-  std::cout << sizeI << std::endl;
-  for (int i = 0; i < sizeI/4; i++) {
-    std::cerr << std::bitset<32>(instr_mem[i]) << std::endl;
-  }
+  // bool isDelay = 0;
+  // registers[1] = DATA_OFFSET;
+  // data_mem[0] = 0xFF;
 
+  // find_instr(0b10001100001000100000000000000000, registers, pc, isDelay, instr_mem, data_mem);
 
-  
+  // std::cerr << std::bitset<32>(registers[2]) << std::endl;
 
-  /* //BINARY TESTING SUITE
+   //BINARY TESTING SUITE
 
 
   //Print out all instructions
@@ -146,22 +144,22 @@ int main(int argc, char *argv[]) {
   //  std::cerr << std::bitset<32>(instr_mem[i]) << std::endl;
   //}
 
-  bool isDelay = false; //true if executing next 
+  bool isDelay = false; //true if executing next
   uint32_t dealySlot = 0;
-  
+
   while (1) {
-    //This is for TESTING ----- REMOVE IT 
-    std::string tBlock;
-    std::cout << std::endl;
-    std::cout << "Program counter = "<<std::hex << pc*4 + IMEM_OFFSET<<std::endl;
-    std::cout << "Vector index = "<<std::hex << pc<<std::endl;
-    std::cout << "And instruction is: " << std::bitset<32>(instr_mem[pc])<<std::endl;
-    std::cout << std::endl;
-    std::cin >> tBlock;
+    //This is for TESTING ----- REMOVE IT
+    // std::string tBlock;
+    // std::cout << std::endl;
+    // std::cout << "Program counter = "<<std::hex << pc*4 + IMEM_OFFSET<<std::endl;
+    // std::cout << "Vector index = "<<std::hex << pc<<std::endl;
+    // std::cout << "And instruction is: " << std::bitset<32>(instr_mem[pc])<<std::endl;
+    // std::cout << std::endl;
+    // std::cin >> tBlock;
     registers[0] = 0;
     if(isDelay && (pc +1 < sizeI/4)){
       isDelay = false;
-      find_instr(instr_mem[pc], registers,pc,isDelay);
+      find_instr(instr_mem[pc], registers,pc,isDelay, instr_mem, data_mem);
       if(isDelay){
          dealySlot = instr_mem[pc];
        }
@@ -169,12 +167,12 @@ int main(int argc, char *argv[]) {
 
     }
     else if(dealySlot !=0){
-        find_instr(dealySlot, registers,pc, isDelay);
+        find_instr(dealySlot, registers,pc, isDelay, instr_mem, data_mem);
         dealySlot = 0;
         pc +=1;
     }
-     else if (pc +1 < sizeI/4) {
-       find_instr(instr_mem[pc], registers,pc, isDelay);
+     else if (pc +1 < IMEM_LENGTH/4) {
+       find_instr(instr_mem[pc], registers,pc, isDelay, instr_mem, data_mem);
        if(isDelay){
          dealySlot = instr_mem[pc];
        }
@@ -189,15 +187,16 @@ int main(int argc, char *argv[]) {
        exit(-11); //memory out of address range - exited with error
      }
    }
-   */
 
   return 0;
 }
 
-void find_instr(const uint32_t &instr, uint32_t reg[], uint32_t &pc, bool& isDelay) {
+void find_instr(const uint32_t &instr, uint32_t reg[], uint32_t &pc, bool& isDelay, std::vector<uint32_t> &instr_mem, std::vector<uint32_t> &data_mem) {
   uint32_t opcode = instr & 0b11111100000000000000000000000000;
-
-  if (opcode == 0) {
+  if (instr == 0) {
+    return;
+  }
+  else if (opcode == 0) {
     do_rType(instr, reg,pc);
   }
   else if ((opcode == 0b1100000000000000000000000000) || (opcode == 0b1000000000000000000000000000)) {
@@ -205,6 +204,7 @@ void find_instr(const uint32_t &instr, uint32_t reg[], uint32_t &pc, bool& isDel
   }
   else{
     std::cerr<<"itype"<<std::endl;
+    do_iType(instr, reg, pc, instr_mem, data_mem);
   }
 }
 
@@ -223,7 +223,7 @@ void do_rType(const uint32_t &instr, uint32_t reg[], uint32_t &pc) {
     std::cerr << "sll" << std::endl;
     reg[dest] = sll(reg[r2], shft);
   }
-  else if (fn = 0b000010) {
+  else if (fn == 0b000010) {
     std::cerr << "srl" << std::endl;
     reg[dest] << srl(reg[r2], shft);
   }
@@ -498,7 +498,7 @@ uint32_t lw(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMe
     std::cout << "got here"<<std::endl;
     exit(-11);
   }
-  
+
   if((address >= IMEM_OFFSET) && (address < IMEM_OFFSET + IMEM_LENGTH - 3)){
     return instMem[(address-IMEM_OFFSET)/4];
   }
@@ -517,7 +517,7 @@ uint32_t lw(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMe
 }
 
 void sw(const int &r1, const int&r2, const uint32_t &offset, std::vector<uint32_t>&dataMem){
-  
+
   uint32_t address = r1 + offset;
   if(address & 0b11 != 0){
     exit(-11);
