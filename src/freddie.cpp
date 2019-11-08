@@ -6,6 +6,8 @@
 
 const uint32_t IMEM_OFFSET = 0x10000000;
 const uint32_t IMEM_LENGTH = 0x1000000;
+const uint32_t DATA_OFFSET = 0x20000000;
+const uint32_t DATA_LENGTH =  0x4000000;
 const int WORD_LENGTH = 32;
 
 void find_instr(const uint32_t &instr, uint32_t reg[], uint32_t &pc,bool& isDelay);
@@ -102,7 +104,7 @@ int main(int argc, char *argv[]) {
        }
        pc += 1;
      }
-     else if(pc +1 == sizeI/4){
+     else if(pc == 0){
       std::cerr << "Program completed successfully" << std::endl;
       exit(registers[2]); //program executed properly and exited
      }
@@ -273,3 +275,39 @@ uint32_t j(uint32_t index){
   // aslo check this uses the delay slot
   return index;
 }
+
+uint32_t lw(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem){
+  uint32_t address = r1 + offset;
+  if((address >= IMEM_OFFSET) && (address < IMEM_OFFSET + IMEM_LENGTH - 3)){
+    return instrMem[(address-IMEM_OFFSET)/4];
+  }
+  else if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH - 3)){
+    return dataMem[(address-DATA_OFFSET)/4];
+  }
+  else if(address == 0x30000000){
+    char response;
+    std::cin >> response; 
+    return response;
+  }
+  else{
+    //mem exeception
+  }
+
+}
+
+void sw(const int &r1, const uint32_t &offset, std::vector<uint32_t>&dataMem){
+  uint32_t address = r1 + offset;
+  if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH - 3)){
+    dataMem[(address-DATA_OFFSET)/4] = r1;
+  }
+  else if(address == 0x30000004){
+    char response = r1;
+    std::cout <<  response; 
+  }
+  else{
+    //mem exception
+  }
+
+}
+
+// check char is right length??
