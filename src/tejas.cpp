@@ -25,8 +25,18 @@ int mfhi(uint32_t reg[]);
 int mflo(uint32_t reg[]);
 void mult(const int &r1, const int &r2, uint32_t reg[]);
 void multu(const int &r1, const int &r2, uint32_t reg[]);
+void div(const int &r1, const int &r2, uint32_t reg[]);
+void divu(const int &r1, const int &r2, uint32_t reg[]);
+int add(const int &r1, const int &r2);
 int addu(const int &r1, const int &r2);
+int sub(const int &r1, const int &r2);
 int subu(const int &r1, const int &r2);
+int and(const int &r1, const int &r2);
+int or(const int &r1, const int &r2);
+int xor(const int &r1, const int &r2);
+int nor(const int &r1, const int &r2);
+int slt(const int &r1, const int &r2);
+int sltu(const int &r1, const int &r2);
 
 int main(int argc, char *argv[]) {
 
@@ -163,14 +173,6 @@ void do_rType(const uint32_t &instr, uint32_t reg[], uint32_t &pc) {
     std::cerr << "mtlo" << std::endl;
     reg[34] = reg[r1];
   }
-  else if (fn == 0b100001) {
-    std::cerr << "addu" << std::endl;
-    reg[dest] = addu(reg[r1], reg[r2]);
-  }
-  else if (fn == 0b100011) {
-    std::cerr << "subu" << std::endl;
-    reg[dest] = subu(reg[r1], reg[r2]);
-  }
   else if (fn == 0b011000) {
     std::cerr << "mult" << std::endl;
     mult(reg[r1], reg[r2], reg);
@@ -178,6 +180,54 @@ void do_rType(const uint32_t &instr, uint32_t reg[], uint32_t &pc) {
   else if (fn == 0b011001) {
     std::cerr << "multu" << std::endl;
     multu(reg[r1], reg[r2], reg);
+  }
+  else if (fn == 0b011010) {
+    std::cerr << "div" << std::endl;
+    div(reg[r1], reg[r2], reg);
+  }
+  else if (fn == 0b011011) {
+    std::cerr << "divu" << std::endl;
+    divu(reg[r1], reg[r2], reg);
+  }
+  else if (fn == 0b100000) {
+    std::cerr << "add" << std::endl;
+    reg[dest] = add(reg[r1], reg[r2]);
+  }
+  else if (fn == 0b100001) {
+    std::cerr << "addu" << std::endl;
+    reg[dest] = addu(reg[r1], reg[r2]);
+  }
+  else if (fn == 0b100010) {
+    std::cerr << "sub" << std::endl;
+    reg[dest] = sub(reg[r1], reg[r2]);
+  }
+  else if (fn == 0b100011) {
+    std::cerr << "subu" << std::endl;
+    reg[dest] = subu(reg[r1], reg[r2]);
+  }
+  else if (fn == 0b100100) {
+    std::cerr << "and" << std::endl;
+    reg[dest] = and(reg[r1], reg[r2]);
+  }
+  else if (fn == 0b100101) {
+    std::cerr << "or" << std::endl;
+    reg[dest] = or(reg[r1], reg[r2]);
+  }
+  else if (fn == 0b100110) {
+    std::cerr << "xor" << std::endl;
+    reg[dest] = xor(reg[r1], reg[r2]);
+  }
+  else if (fn == 0b100111) {
+    std::cerr << "nor" << std::endl;
+    reg[dest] = nor(reg[r1], reg[r2]);
+  }
+  else if (fn == 0b101010) {
+    std::cerr << "slt" << std::endl;
+    reg[dest] = slt(reg[r1], reg[r2]);
+  }
+  else if (fn == 0b101011) {
+    std::cerr << "sltu" << std::endl;
+    reg[dest] = sltu(reg[r1], reg[r2]);
   }
 
 }
@@ -226,15 +276,15 @@ int jr(const uint32_t &r1){ // jump regeister
     }
 }
 
-int mfhi(uint32_t reg[]) { // Move from HI register
+int mfhi(uint32_t reg[]) { // move from HI register
   return reg[33];
 }
 
-int mflo(uint32_t reg[]) {
+int mflo(uint32_t reg[]) { // move from LO register
   return reg[34];
 }
 
-void mult(const int &r1, const int &r2, uint32_t reg[]) {
+void mult(const int &r1, const int &r2, uint32_t reg[]) { // signed multiplication
   int64_t result = r1 * r2;
   reg[34] = static_cast<uint32_t>(result);
   reg[33] = static_cast<uint32_t>(result >> 32);
@@ -248,10 +298,80 @@ void multu(const int &r1, const int &r2, uint32_t reg[]) { // unsigned multiplic
   reg[33] = static_cast<uint32_t>(result >> 32);
 }
 
+void div(const int &r1, const int &r2, uint32_t reg[]) { // isgned division
+  reg[33] = ur1 / ur2;
+  reg[34] = ur1 % ur2;
+}
+
+void divu(const int &r1, const int &r2, uint32_t reg[]) { // unsigned division
+  uint32_t ur1 = static_cast<uint32_t>(r1);
+  uint32_t ur2 = static_cast<uint32_t>(r2);
+  reg[33] = ur1 / ur2;
+  reg[34] = ur1 % ur2;
+}
+
+int add(const int &r1, const int &r2) { // signed addition
+  uint32_t ur1 = static_cast<uint64_t>(r1);
+  uint32_t ur2 = static_cast<uint64_t>(r2);
+  if (ur1 + ur2 <= 0b1111111111111111111111111111111111111111111111111111111111111111) {
+    return (r1 + r2);
+  }
+  else {
+    return 0; // throw exception
+  }
+}
+
 int addu(const int &r1, const int &r2) { // unsigned addition
-  return r1 + r2;
+  return (r1 + r2);
+}
+
+int sub(const int &r1, const int &r2) { // signed subtraction
+  uint32_t ur1 = static_cast<uint64_t>(r1);
+  uint32_t ur2 = static_cast<uint64_t>(-r2);
+  if (ur1 + ur2 <= 0b1111111111111111111111111111111111111111111111111111111111111111) {
+    return (r1 + r2);
+  }
+  else {
+    return 0; // throw exception
+  }
 }
 
 int subu(const int &r1, const int &r2) { // unsigned subtraction
-  return r1 - r2;
+  return (r1 - r2);
+}
+
+int and(const int &r1, const int &r2) {
+  return (r1 & r2);
+}
+
+int or(const int &r1, const int &r2) {
+  return (r1 | r2);
+}
+
+int xor(const int &r1, const int &r2) {
+  return (r1 ^ r2);
+}
+
+int nor(const int &r1, const int &r2) {
+  return ~(r1 | r2)
+}
+
+int slt(const int &r1, const int &r2) {
+  if (r1 < r2) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
+}
+
+int sltu(const int &r1, const int &r2) {
+  uint32_t ur1 = static_cast<uint32_t>(r1);
+  uint32_t ur2 = static_cast<uint32_t>(r2);
+  if (ur1 < ur2) {
+    return 1;
+  }
+  else {
+    return 0;
+  }
 }
