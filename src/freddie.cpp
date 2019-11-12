@@ -54,6 +54,10 @@ int jalr(const int &r1,const int &dest,const int&pc,  uint32_t reg[]);
 uint32_t lw(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem);
 void sw(const int &r1, const int&r2,const uint32_t &offset, std::vector<uint32_t>&dataMem);
 
+int addI(const int &r1, const int& imm);
+int orI(const int &r1, const int& imm);
+
+
 int main(int argc, char *argv[]) {
 
   std::vector<uint32_t> instr_mem;
@@ -106,7 +110,7 @@ int main(int argc, char *argv[]) {
   std::cerr << "data 0 is now: "<<std::bitset<32>(data_mem[2])<<std::endl;
   std::cerr<<"data 0 should be: "<<std::bitset<32>(registers[3])<<std::endl;
   std::cerr<< std::endl;*/
-
+  
 
   std::ifstream binStream;
 
@@ -114,8 +118,16 @@ int main(int argc, char *argv[]) {
 
   try {
     binStream.open(argv[1], std::ios_base::binary | std::ios_base::in | std::ios_base::ate);
+    if( !binStream.good()){
+      std::cerr <<"Not a file"<<std::endl;
+      exit(-12);
+    }
     std::streampos size = binStream.tellg();
     sizeI = size;
+    if (sizeI > IMEM_LENGTH){
+      //file too big
+      exit(-11);
+    }
     binStream.seekg (0, std::ios::beg);
     binStream.read(binmen, size);
     binStream.close();
@@ -180,7 +192,9 @@ int main(int argc, char *argv[]) {
 
     }
     else if(dealySlot !=0){
+        isDelay = true;
         find_instr(dealySlot, registers,pc, isDelay, instr_mem, data_mem);
+        isDelay = false;
         dealySlot = 0;
         pc +=1;
     }
@@ -265,8 +279,9 @@ void do_rType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, bool& isDelay
     reg[dest] = srav(reg[r1], reg[r2]);
   }
   else if (fn == 0b1000) {
-    std::cerr << "jr" << std::endl;
+    
     if(isDelay){
+      std::cerr << "jr" << std::endl;
       pc  = jr(r1,reg);
     }
     else{
@@ -355,6 +370,7 @@ void do_rType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, bool& isDelay
     }
   }
 
+
 }
 
 void do_iType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, std::vector<uint32_t> &instr_mem, std::vector<uint32_t> &data_mem) {
@@ -370,6 +386,18 @@ void do_iType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, std::vector<u
   else if (op == 0b101011) {
     std::cerr << "sw" << std::endl;
     sw(reg[r1], reg[r2], imm, data_mem);
+  }
+  else if(op == 0b100){
+    std::cerr << "addI"<<std::endl;
+    reg[r1] = addI(reg[r2], imm);
+  }
+  else if(op == 0b1101){
+    std::cerr << "orI"<<std::endl;
+    reg[r1] = orI(reg[r2], imm);
+  }
+  else{
+    //invalid opcode
+    exit(-12);
   }
 }
 
@@ -596,7 +624,7 @@ int jal(const uint32_t &instr, const int& pc, uint32_t reg[]){
       std::cerr << "Program completed successfully" << std::endl;
       exit(static_cast<uint8_t>(reg[2]));
     }
-    else if(target >= IMEM_OFFSET + IMEM_LENGTH ){
+    else if(target >= IMEM_OFFSET + IMEM_LENGTH || target < IMEM_OFFSET){
       exit(-11);
     }
     else{
@@ -608,6 +636,19 @@ int jalr(const int &r1,const int &dest,const int&pc,  uint32_t reg[]){
   reg[dest] = (pc*4 + IMEM_OFFSET) + 4;
   jr(r1,reg);
 }
+
+int addI(const int &r1, const int& imm){
+  return (r1 + imm);
+}
+int orI(const int &r1, const int& imm){
+  return (r1 | imm);
+}
+
+
+
+
+
+
 
 //Qs : how do you jump to 0 if you add PC offset each time!!?
 //After delay, after jump, do you add +4 to pc before finding next instruction
