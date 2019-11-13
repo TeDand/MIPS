@@ -14,7 +14,7 @@ void find_instr(const uint32_t &instr, uint32_t reg[], uint32_t &pc, bool& isDel
 
 
 void do_rType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, bool& isDelay);
-void do_iType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, std::vector<uint32_t> &instr_mem, std::vector<uint32_t> &data_mem);
+void do_iType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, std::vector<uint32_t> &instr_mem, std::vector<uint32_t> &data_mem, bool& isDelay);
 void do_jType(const uint32_t &instr, uint32_t reg[], uint32_t &pc);
 
 void decode_rType(const uint32_t &instr, int &r1, int &r2, int &dest, int &shft);
@@ -56,6 +56,15 @@ void sw(const int &r1, const int&r2,const uint32_t &offset, std::vector<uint32_t
 
 int addI(const int &r1, const int& imm);
 int orI(const int &r1, const int& imm);
+
+int beq(int r1, int r2, int imm);
+int bgez(int r1, int imm);
+int bgezal(int r1, int imm, uint32_t reg[], const int pc);
+int bgtz(int r1, int imm);
+int blez(int r1, int imm);
+int bltz(int r1, int imm);
+int bltzal(int r1, int imm, uint32_t reg[], const int pc);
+int bne(int r1, int r2, int imm);
 
 
 int main(int argc, char *argv[]) {
@@ -196,7 +205,6 @@ int main(int argc, char *argv[]) {
         find_instr(dealySlot, registers,pc, isDelay, instr_mem, data_mem);
         isDelay = false;
         dealySlot = 0;
-        pc +=1;
     }
      else if (pc +1 < IMEM_LENGTH/4) {
        find_instr(instr_mem[pc], registers,pc, isDelay, instr_mem, data_mem);
@@ -232,7 +240,7 @@ void find_instr(const uint32_t &instr, uint32_t reg[], uint32_t &pc, bool& isDel
   }
   else{
     std::cerr<<"itype"<<std::endl;
-    do_iType(instr, reg, pc, instr_mem, data_mem);
+    do_iType(instr, reg, pc, instr_mem, data_mem,isDelay);
   }
 }
 
@@ -373,7 +381,7 @@ void do_rType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, bool& isDelay
 
 }
 
-void do_iType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, std::vector<uint32_t> &instr_mem, std::vector<uint32_t> &data_mem) {
+void do_iType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, std::vector<uint32_t> &instr_mem, std::vector<uint32_t> &data_mem, bool& isDelay) {
   int r1, r2, imm;
   uint32_t op = (instr >> 26) & 0b111111;
 
@@ -395,6 +403,85 @@ void do_iType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, std::vector<u
     std::cerr << "orI"<<std::endl;
     reg[r1] = orI(reg[r2], imm);
   }
+  else if(op == 0b100){
+    
+    
+    if(isDelay){
+      std::cerr << "beq"<<std::endl;
+      pc += beq(reg[r1],reg[r2], imm);
+    }
+    else{
+      isDelay = true;
+    }
+  }
+  else if(op == 1){
+    if(r2 == 1){
+      if(isDelay){
+        std::cerr << "bgez"<<std::endl;
+        pc += bgez(reg[r1], imm);
+      }
+      else{
+        isDelay = true;
+      }
+    }
+    else if(r2 ==0b10001){
+      if(isDelay){
+        std::cerr << "bgezal"<<std::endl;
+        pc += bgezal(reg[r1], imm,reg,pc);
+      }
+      else{
+        isDelay = true;
+      }
+    }
+    else if(r2 == 0){
+      if(isDelay){
+        std::cerr << "bltz"<<std::endl;
+        pc += bltz(reg[r1], imm);
+      }
+      else{
+        isDelay = true;
+      }
+    }
+    else if(r2 == 0b10000){
+      if(isDelay){
+        std::cerr << "bltzal"<<std::endl;
+        pc += bltzal(reg[r1], imm,reg,pc);
+      }
+      else{
+        isDelay = true;
+      }
+    }
+  }
+  else if(op == 0b111){
+    if(isDelay){
+        std::cerr << "bgtz"<<std::endl;
+        pc += bgtz(reg[r1], imm);
+      }
+      else{
+        isDelay = true;
+      }
+  }
+  else if(op == 0b110){
+    if(isDelay){
+        std::cerr << "blez"<<std::endl;
+        pc += blez(reg[r1], imm);
+      }
+      else{
+        isDelay = true;
+      }
+  }
+  else if(op == 0b101){
+    if(isDelay){
+        std::cerr << "bne"<<std::endl;
+        pc += bne(reg[r1],reg[r2], imm);
+      }
+      else{
+        isDelay = true;
+      }
+  }
+  
+
+
   else{
     //invalid opcode
     exit(-12);
@@ -644,11 +731,77 @@ int orI(const int &r1, const int& imm){
   return (r1 | imm);
 }
 
+int beq(int r1, int r2, int imm){
+  if(r1 == r2){
+    return imm;
+  }
+  else return 1;
+}
 
+int bgez(int r1, int imm){
+  if(r1 >= 0){
+    return imm;
+  }
+  else{
+    return 1;
+  }
+}
 
+int bgezal(int r1, int imm, uint32_t reg[], const int pc){
+  //double check if next line should be in the if
+  reg[31] = pc+1;
+  if(r1 >= 0){ 
+    return imm;
+  }
+  else{
+    return 1;
+  }
+}
 
+int bgtz(int r1, int imm){
+  if(r1 > 0){
+    return imm;
+  }
+  else{
+    return 1;
+  }
+}
 
+int blez(int r1, int imm){
+  if(r1 <= 0){
+    return imm;
+  }
+  else{
+    return 1;
+  }
+}
 
+int bltz(int r1, int imm){
+  if(r1 < 0){
+    return imm;
+  }
+  else{
+    return 1;
+  }
+}
+
+int bltzal(int r1, int imm, uint32_t reg[], const int pc){
+  //double check if next line should be in the if
+  reg[31] = pc+1;
+  if(r1 < 0){ 
+    return imm;
+  }
+  else{
+    return 1;
+  }
+}
+
+int bne(int r1, int r2, int imm){
+  if(r1 != r2){
+    return imm;
+  }
+  else return 1;
+}
 
 //Qs : how do you jump to 0 if you add PC offset each time!!?
 //After delay, after jump, do you add +4 to pc before finding next instruction
