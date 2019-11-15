@@ -66,6 +66,21 @@ int bltz(int r1, int imm);
 int bltzal(int r1, int imm, uint32_t reg[], const int pc);
 int bne(int r1, int r2, int imm);
 
+//new stuff
+int addIU(const int &r1, const int& imm);
+int andI(const int &r1, const int& imm);
+uint32_t lb(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem);
+uint32_t lbu(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem);
+uint32_t lh(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem);
+uint32_t lhu(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem);
+int lui( const int& imm);
+uint32_t lwl(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem);
+uint32_t lwr(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem);
+void sb(const int &r1, const int&r2, const uint32_t &offset, std::vector<uint32_t>&dataMem);
+void sh(const int &r1, const int&r2, const uint32_t &offset, std::vector<uint32_t>&dataMem);
+int slti(int r1, int imm);
+int sltiu(uint32_t r1, uint32_t imm);
+int xorI(const int &r1, const int& imm);
 
 int main(int argc, char *argv[]) {
 
@@ -402,6 +417,48 @@ void do_iType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, std::vector<u
   else if(op == 0b1101){
     std::cerr << "orI"<<std::endl;
     reg[r1] = orI(reg[r2], imm);
+  }
+  else if(op == 0b1001){
+    reg[r2] = addIU(reg[r1], imm);
+  }
+  else if(op == 0b1100){
+    reg[r2] = andI(reg[r1], imm);
+  }
+  else if(op == 0b100000){
+    reg[r2] = lb(reg[r1],imm,instr_mem,data_mem);
+  }
+  else if(op == 0b100100){
+    reg[r2] = lbu(reg[r1],imm,instr_mem,data_mem);
+  }
+  else if(op == 0b100001){
+    reg[r2] = lh(reg[r1],imm,instr_mem,data_mem);
+  }
+  else if(op == 0b100101){
+    reg[r2] = lhu(reg[r1],imm,instr_mem,data_mem);
+  }
+  else if(op == 0b1111 && reg[r1] == 0){
+    reg[r2] = lui(imm);
+  }
+  else if(op == 0b100010){
+    reg[r2] = reg[r2] & lwl(reg[r1],imm,instr_mem,data_mem);
+  }
+  else if(op == 0b100110){
+    reg[r2] = reg[r2] & lwr(reg[r1],imm,instr_mem,data_mem);
+  }
+  else if(op == 0b101000){
+    sb(r1,reg[r2],imm,data_mem);
+  }
+  else if(op == 0b101001){
+    sh(reg[r1],reg[r2],imm,data_mem);
+  }
+  else if(op == 0b1010){
+    reg[r2] = slti(reg[r1],imm);
+  }
+  else if(op == 0b1011){
+    reg[r2] = sltiu(reg[r1],imm);
+  }
+  else if(op == 0b1110){
+    reg[r2] = xorI(reg[r1], imm);
   }
   else if(op == 0b100){
     
@@ -802,6 +859,251 @@ int bne(int r1, int r2, int imm){
   }
   else return 1;
 }
+
+
+// New stuff
+
+
+int addIU(const int &r1, const int& imm){
+
+  return (r1 + imm);
+
+}
+int andI(const int &r1, const int& imm){
+
+  return (r1 & imm);
+
+}
+
+uint32_t lb(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem){
+
+  uint32_t address = r1 + offset;
+
+  if((address >= IMEM_OFFSET) && (address < IMEM_OFFSET + IMEM_LENGTH)){
+    uint32_t word = instMem[(address-IMEM_OFFSET)/4];
+    uint8_t wmask =(word >>8*(address-IMEM_OFFSET)%4);
+    return(static_cast<uint32_t>(0xFF & wmask));
+  }
+  else if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH)){
+    uint32_t word = dataMem[(address-DATA_OFFSET)/4];
+    uint8_t wmask =(word >>8*(address-IMEM_OFFSET)%4);
+    return(static_cast<uint32_t>(0xFF & wmask));
+  }
+  else if(address == 0x30000000){
+    char response;
+    std::cin>>response;
+    return response;
+  }
+  else{
+    std::exit(-11);
+  }
+
+}
+uint32_t lbu(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem){
+
+  uint32_t address = r1 + offset;
+
+  if((address >= IMEM_OFFSET) && (address < IMEM_OFFSET + IMEM_LENGTH)){
+    uint32_t word = instMem[(address-IMEM_OFFSET)/4];
+    uint32_t wmask =(word >>8*(address-IMEM_OFFSET)%4);
+    return(0xFF & wmask);
+  }
+  else if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH)){
+    uint32_t word = dataMem[(address-DATA_OFFSET)/4];
+    uint8_t wmask =(word >>8*(address-IMEM_OFFSET)%4);
+    return(0xFF & wmask);
+  }
+  else if(address == 0x30000000){
+    char response;
+    std::cin>>response;
+    return response;
+  }
+  else{
+    std::exit(-11);
+  }
+
+}
+
+uint32_t lh(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem){
+  
+  uint32_t address = r1 + offset;
+  if(address & 0b1 != 0){
+    exit(-11);
+  }
+  if((address >= IMEM_OFFSET) && (address < IMEM_OFFSET + IMEM_LENGTH)){
+    uint32_t word = instMem[(address-IMEM_OFFSET)/4];
+    uint16_t wmask =(word >>16*(address-IMEM_OFFSET)%2);
+    return(static_cast<uint32_t>(0xFFFF & wmask));
+  }
+  else if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH)){
+    uint32_t word = dataMem[(address-DATA_OFFSET)/4];
+    uint8_t wmask =(word >>16*(address-IMEM_OFFSET)%2);
+    return(static_cast<uint32_t>(0xFFFF & wmask));
+  }
+  else if(address == 0x30000000){
+    char response;
+    std::cin>>response;
+    return response;
+  }
+  else{
+    std::exit(-11);
+  }
+
+}
+
+uint32_t lhu(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem){
+  
+  uint32_t address = r1 + offset;
+  if(address & 0b1 != 0){
+    exit(-11);
+  }
+  if((address >= IMEM_OFFSET) && (address < IMEM_OFFSET + IMEM_LENGTH)){
+    uint32_t word = instMem[(address-IMEM_OFFSET)/4];
+    uint32_t wmask =(word >>16*(address-IMEM_OFFSET)%2);
+    return(0xFFFF & wmask);
+  }
+  else if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH)){
+    uint32_t word = dataMem[(address-DATA_OFFSET)/4];
+    uint8_t wmask =(word >>16*(address-IMEM_OFFSET)%2);
+    return(0xFFFF & wmask);
+  }
+  else if(address == 0x30000000){
+    char response;
+    std::cin>>response;
+    return response;
+  }
+  else{
+    std::exit(-11);
+  }
+
+}
+
+int lui( const int& imm){
+
+  return (imm) << 16;
+
+}
+
+uint32_t lwl(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem){
+  
+  uint32_t address = r1 + offset;
+  int align = address%4;
+  uint32_t word;
+
+  if((address >= IMEM_OFFSET) && (address < IMEM_OFFSET + IMEM_LENGTH)){
+    word = instMem[(address-IMEM_OFFSET)/4];
+    
+  }
+  else if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH)){
+    word = dataMem[(address-DATA_OFFSET)/4];
+  }
+  else if(address == 0x30000000){
+    char response;
+    std::cin>>response;
+    return response;
+  }
+  else{
+    std::exit(-11);
+  }
+
+  uint32_t mask = 0xFF000000;
+  uint32_t result = 0;
+    for (int i = 0; i < align+1; i++){
+      result = (mask & word) | result;
+      mask = mask >> 8;
+    }
+  return(result);
+
+}
+
+uint32_t lwr(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem){
+  
+  uint32_t address = r1 + offset;
+  int align = address%4;
+  uint32_t word;
+
+  if((address >= IMEM_OFFSET) && (address < IMEM_OFFSET + IMEM_LENGTH)){
+    word = instMem[(address-IMEM_OFFSET)/4];
+    
+  }
+  else if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH)){
+    word = dataMem[(address-DATA_OFFSET)/4];
+  }
+  else if(address == 0x30000000){
+    char response;
+    std::cin>>response;
+    return response;
+  }
+  else{
+    std::exit(-11);
+  }
+
+  uint32_t mask = 0xFF;
+  uint32_t result = 0;
+    for (int i = 0; i < align+1; i++){
+      result = (mask & word) | result;
+      mask = mask << 8;
+    }
+  return(result);
+
+}
+
+void sb(const int &r1, const int&r2, const uint32_t &offset, std::vector<uint32_t>&dataMem){
+
+  uint32_t address = r1 + offset;
+  int align = 8* (address%4);
+  if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH - 1)){
+    uint32_t target = dataMem[(address-DATA_OFFSET)/4] & ~(0xFF << align);
+    dataMem[(address-DATA_OFFSET)/4] = target|((r2 & 0xFF)<<offset);
+  }
+  else if(address == 0x30000004){
+    char response = r2;
+    std::cout<< response;
+  }
+  else{
+    std::exit(-11);
+  }
+
+}
+
+void sh(const int &r1, const int&r2, const uint32_t &offset, std::vector<uint32_t>&dataMem){
+
+  uint32_t address = r1 + offset;
+  int align = 16* (address%2);
+  if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH - 1)){
+    uint32_t target = dataMem[(address-DATA_OFFSET)/4] & ~(0xFF << align);
+    dataMem[(address-DATA_OFFSET)/4] = target|((r2 & 0xFF)<<offset);
+  }
+  else if(address == 0x30000004){
+    char response = r2;
+    std::cout<< response;
+  }
+  else{
+    std::exit(-11);
+  }
+
+}
+
+int slti(int r1, int imm){
+  if(r1 < imm){
+    return 1;
+  }
+  else{
+    return 0;
+  }
+}
+int sltiu(uint32_t r1, uint32_t imm){
+  if(r1 < imm){
+    return 1;
+  }
+  else{
+    return 0;
+  }
+}
+int xorI(const int &r1, const int& imm){
+  return (r1 ^ imm);
+}
+
 
 //Qs : how do you jump to 0 if you add PC offset each time!!?
 //After delay, after jump, do you add +4 to pc before finding next instruction
