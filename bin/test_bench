@@ -1,0 +1,12 @@
+
+#!/bin/bash
+
+./"$@" ../tests/bin/assebly.mips.bin
+
+RETCODE=$? ;
+
+if [[ "$RETCODE" == "244" ]] ; then
+	echo "success" ;
+else
+	echo "failure" ;
+fi
