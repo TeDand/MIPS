@@ -1,11 +1,10 @@
-# 136
+# 255
 
-lui $3, 0x88ff
-ori $4, $0, 0x88ff
+lui $3, 0x2000
+lui $4, 0x88ff
 sw $4, 0($3)
 lw $2, 0($3)
-ori $5, 0x008
-srl $2, $5
+srl $2, $2, 0x10
 jr $0
 
 # basic functionality
