@@ -1,12 +1,47 @@
-
 #!/bin/bash
 
-./"$@" ../tests/bin/assebly.mips.bin
+#rm -rfv tests/bin/* > /dev/null 2>&1
 
-RETCODE=$? ;
+for i in tests/src/*.s; do
+	i2=${i::-2}
+	i3=${i2:10}
 
-if [[ "$RETCODE" == "244" ]] ; then
-	echo "success" ;
-else
-	echo "failure" ;
-fi
+	# Assemble MIPS assembly file (.s) into MIPS object file (.o)
+	mips-linux-gnu-gcc -W -Wall -O3 -fno-builtin -march=mips1 -mfp32 -c "$i" -o "$i2".mips.o
+
+	# Link MIPS object file (.o), producing .elf, using memory locations specified in spec
+	mips-linux-gnu-gcc -W -Wall -O3 -fno-builtin -march=mips1 -mfp32 -nostdlib -Wl,-melf32btsmip -march=mips1 -nostartfiles -mno-check-zero-division -Wl,--gpsize=0 -static -Wl,-Bstatic -Wl,--build-id=none -T linker.ld "$i2".mips.o -o "$i2".mips.elf > /dev/null 2>&1
+
+	# Extract binary instructions only from linked object file (.elf)
+	mips-linux-gnu-objcopy -O binary --only-section=.text "$i2".mips.elf tests/bin/"$i3".mips.bin
+
+	# Disassemble linked object file (.elf), pulling out instructions as MIPS assembly file (.s)
+	mips-linux-gnu-objdump -j .text -D "$i2".mips.elf > "$i2".mips.s
+
+	rm "$i2".mips.o
+	rm "$i2".mips.elf
+	rm "$i2".mips.s
+
+done
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+NC='\033[0m'
+
+for k in tests/bin/*.bin; do
+	TEST=${k:10}
+	TEST=${TEST::-9}
+	./"$@" ./"$k"
+	RETCODE=$? ;
+	EXP=$(head -n 1 tests/src/"$TEST".s)
+	EXP=${EXP:2}
+	DESC=$(tail -n 1 tests/src/"$TEST".s)
+	DESC=${DESC:2}
+
+	if [[ "$RETCODE" == "$EXP" ]] ; then
+		echo -e ""$TEST" - "$DESC", \t expected   :   "$EXP", \t actual   :   "$RETCODE", \t ${GREEN}PASS${NC}"
+	else
+		echo -e ""$TEST" - "$DESC", \t expected   :   "$EXP", \t actual   :   "$RETCODE", \t ${RED}FAIL${NC}"
+	fi
+
+done
