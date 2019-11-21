@@ -1,7 +1,7 @@
 # 245
 
 lui $3, 0x2000
-lw $2, -4($3)
+lbu $2, -1($3)
 jr $0
 
 # test load below data memory
