@@ -2,7 +2,7 @@
 
 ori $2, $0, 0x0007
 beq $0, $0, end
-ori $2, $0, 0x00dd
+nop
 end: jr $0
 nop
 

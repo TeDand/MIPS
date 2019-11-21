@@ -1,8 +1,8 @@
-# 11
+# 10
 
 ori $2, $0, 0x0007
 bgezal $2, add
-addi $2, 0x0001
+nop
 jr $0
 nop
 add: addi $2, 0x0003

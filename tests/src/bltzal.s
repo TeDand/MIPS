@@ -1,12 +1,12 @@
-# 1
+# 10
 
-lui $2, 0x00ff
+ori $2, $0, 0x0007
 sub $3, $0, $2
 bltzal $3, and
-ori $2, 0x0001
+nop
 jr $0
 nop
-and: andi $2, 0x0003
+and: addi $2, 0x0003
 jr $31
 
 # basic functionality
