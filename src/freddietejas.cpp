@@ -74,8 +74,8 @@ uint32_t lbu(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instM
 uint32_t lh(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem);
 uint32_t lhu(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem);
 int lui( const int& imm);
-uint32_t lwl(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem);
-uint32_t lwr(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem);
+uint32_t lwl(const int &r1,const int &r2, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem);
+uint32_t lwr(const int &r1, const int &r2,const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem);
 void sb(const int &r1, const int&r2, const uint32_t &offset, std::vector<uint32_t>&dataMem);
 void sh(const int &r1, const int&r2, const uint32_t &offset, std::vector<uint32_t>&dataMem);
 int slti(int r1, int imm);
@@ -126,12 +126,11 @@ int main(int argc, char *argv[]) {
   }
 
   for (int i = 0; i < sizeI; i++){
-    uint32_t tmp = static_cast<uint32_t>(binmen[i]) << 8 * (3-(i%4));
+    uint32_t tmp = static_cast<uint8_t>(binmen[i]) << (8 * (3-(i%4)));
     instr_mem[i / 4] += tmp;
   }
 
   delete(binmen);
-
 
 
   // bool isDelay = 0;
@@ -146,21 +145,49 @@ int main(int argc, char *argv[]) {
 
 
   //Print out all instructions
-  //for (int i = 0; i < sizeI/4; i++) {
-  //  std::cerr << std::bitset<32>(instr_mem[i]) << std::endl;
-  //}
+  /*for (int i = 0; i < sizeI/4; i++) {
+    std::cerr << std::bitset<32>(instr_mem[i]) << std::endl;
+  }*/
 
   bool isDelay = false; //true if executing next
   uint32_t dealySlot = 0;
+  /* Pretty sure addi3 works? didn't change anything?
+    made add underflow >= 0
+    not sure whats wrong with bltz5
+    failure of jr4 might suggest bad delay slot
+*/
+/*
+  bool tuped = true;
+  if(tuped){
+    bool delay = true;
+    int instr = 0x8000001;
+    find_instr(instr,registers,pc, delay,instr_mem,data_mem);
+    pc = 1;
+    std::cerr<<"Starting PC="<<pc<<std::endl;
+    std::cerr<<"Start as: "<<std::bitset<32>(registers[2])<<std::endl;
+    //registers[3] = srlv(registers[5],registers[1]);
+    //registers[4] = srav(registers[5],registers[1]);
+    registers[3] = addI(registers[0],-1);
+    std::cerr<<"Register 3: "<<std::bitset<32>(registers[3])<<std::endl;
 
+
+
+    jr(registers[0], registers);
+  }
+*/
 
 
 
   while (1) {
     //This is for TESTING ----- REMOVE IT
-     /*std::cerr << "3:" << registers[3] << std::endl;
-     std::cerr << "4: " << registers[4] << std::endl;
-     std::cerr << "2: " << registers[2] << std::endl;
+    /* std::cerr << "2:" << std::bitset<32>(registers[2]) << std::endl;
+     std::cerr << "3: " << std::bitset<32>(registers[3]) << std::endl;
+     std::cerr << "4: " << std::bitset<32>(registers[4]) << std::endl;
+     std::cerr << "Hi: " << std::bitset<32>(registers[33]) << std::endl;
+     std::cerr << "Lo: " << std::bitset<32>(registers[34]) << std::endl;
+     std::cerr << "30: " << std::bitset<32>(registers[30]) << std::endl;
+     std::cerr << "31: " << std::bitset<32>(registers[31]) << std::endl;
+     std::cerr<<"Memory: "<<std::bitset<32>(data_mem[(0x20000000 - DATA_OFFSET)/4])<<std::endl;
      std::string tBlock;
      std::cout << std::endl;
      std::cout << "Program counter = "<<std::hex << pc*4 + IMEM_OFFSET<<std::endl;
@@ -170,8 +197,12 @@ int main(int argc, char *argv[]) {
      std::cin >> tBlock;*/
 
     registers[0] = 0;
-
-    if(isDelay && (pc +1 < sizeI/4)){
+    if(pc < 0){
+      //bad branch?
+      exit(-11);
+    }
+    //changed from pc < sizeI watch out!
+    if(isDelay && (pc< sizeI)){
       isDelay = false;
       find_instr(instr_mem[pc], registers,pc,isDelay, instr_mem, data_mem);
       if(isDelay){
@@ -216,6 +247,9 @@ void find_instr(const uint32_t &instr, uint32_t reg[], uint32_t &pc, bool& isDel
       do_jType(instr,reg,pc);
     }
     else{
+      if(opcode == 0b1100000000000000000000000000){
+        reg[31] = (pc*4 + IMEM_OFFSET)+8;
+      }
       isDelay = true;
     }
   }
@@ -227,11 +261,11 @@ void find_instr(const uint32_t &instr, uint32_t reg[], uint32_t &pc, bool& isDel
 
 void do_jType(const uint32_t &instr, uint32_t reg[],uint32_t &pc) {
   //std::cerr << "Do J Type" << std::endl;
-  int opcode = instr & 0xFC000000 >> 26;
+  int opcode = (instr & 0xFC000000) >> 26;
   if(opcode == 0b10){
     pc = j(instr, pc, reg);
   }
-  else if(opcode == 11){
+  else if(opcode == 0b11){
     pc = jal(instr, pc, reg);
   }
 
@@ -256,7 +290,7 @@ void do_rType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, bool& isDelay
   else if (fn == 0b000010) {
     if (r1 == 0b0) {
       //std::cerr << "srl" << std::endl;
-      reg[dest] << srl(reg[r2], shft);
+      reg[dest] = srl(reg[r2], shft);
     }
     else {
       //std::cerr << "invalid srl" << std::endl;
@@ -505,6 +539,7 @@ void do_rType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, bool& isDelay
         pc = jalr(r1,dest, pc, reg);
       }
       else{
+        reg[dest] = (pc*4 + IMEM_OFFSET) + 8;
         isDelay = true;
       }
     }
@@ -530,7 +565,7 @@ void do_iType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, std::vector<u
     //std::cerr << "sw" << std::endl;
     sw(reg[r1], reg[r2], imm, data_mem);
   }
-  else if(op == 0b100){
+  else if(op == 0b1000){
     //std::cerr << "addI"<<std::endl;
     reg[r2] = addI(reg[r1], imm);
   }
@@ -560,13 +595,13 @@ void do_iType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, std::vector<u
     reg[r2] = lui(imm);
   }
   else if(op == 0b100010){
-    reg[r2] = reg[r2] & lwl(reg[r1],imm,instr_mem,data_mem);
+    reg[r2] = lwl(reg[r1],reg[r2],imm,instr_mem,data_mem);
   }
   else if(op == 0b100110){
-    reg[r2] = reg[r2] & lwr(reg[r1],imm,instr_mem,data_mem);
+    reg[r2] = lwr(reg[r1],reg[r2],imm,instr_mem,data_mem);
   }
   else if(op == 0b101000){
-    sb(r1,reg[r2],imm,data_mem);
+    sb(reg[r1],reg[r2],imm,data_mem);
   }
   else if(op == 0b101001){
     sh(reg[r1],reg[r2],imm,data_mem);
@@ -606,6 +641,7 @@ void do_iType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, std::vector<u
       }
       else{
         isDelay = true;
+        reg[31] = (pc*4 + IMEM_OFFSET)+8;
       }
     }
     else if(r2 == 0){
@@ -623,6 +659,7 @@ void do_iType(const uint32_t &instr, uint32_t reg[], uint32_t &pc, std::vector<u
         pc += bltzal(reg[r1], imm,reg,pc);
       }
       else{
+        reg[31] = (pc*4 + IMEM_OFFSET)+8;
         isDelay = true;
       }
     }
@@ -686,32 +723,34 @@ void decode_iType(const uint32_t &instr, int &r1, int &r2, int &imm) {
 }
 
 int sll(const int &r2, const int &shft) { // logical shift left
-  uint32_t num = static_cast<uint32_t>(shft);
+  uint32_t num = 0x1F & shft;
   return (r2 << num);
 }
 
 int srl(const int &r2, const int &shft) { // logical shift right
-  int num = static_cast<uint32_t>(r2);
+  uint32_t num = r2;
   return (num >> shft);
 }
 
 int sra(const int &r2, const int &shft) { // arithmetic shift right
-  uint32_t num = static_cast<uint32_t>(shft);
+  int num = 0x1F & shft;
   return (r2 >> num);
 }
 
 int sllv(const int &r1, const int &r2) { // logical shift left using r2
-  return (r1 << r2);
+  return (r2 << (r1&0X1F));
 }
 
 int srlv(const int &r1, const int &r2) { // logical shift right using r2
-  int num = static_cast<uint32_t>(r1);
-  return (r2 >> num);
+
+  uint32_t shft = r1&0X1F;
+  int result = srl(r2,shft);
+  return result;
 }
 
 int srav(const int &r1, const int &r2) { // arithmetic shift right using r2
-  uint32_t ur1 = static_cast<uint32_t>(r1);
-  return (r2 >> ur1);
+  int ur1 = r2;
+  return (ur1 >> (r1&0X1F));
 }
 
 int jr(const uint32_t &r1,uint32_t reg[]){ // jump regeister
@@ -720,6 +759,9 @@ int jr(const uint32_t &r1,uint32_t reg[]){ // jump regeister
       exit(static_cast<uint8_t>(reg[2])); //program executed properly and exited
     }
     int target  = reg[r1] - IMEM_OFFSET;
+    if(target % 4 != 0){
+      exit(-11);
+    }
     if((target > 0) || (target < IMEM_LENGTH)){
       return (target/4);
     }
@@ -734,29 +776,33 @@ int mflo(uint32_t reg[]) { // move from LO register
 }
 
 void mult(const int &r1, const int &r2, uint32_t reg[]) { // signed multiplication
-  int64_t result = r1 * r2;
+  int64_t nr1 = static_cast<int64_t>(r1);
+  int64_t nr2 = static_cast<int64_t>(r2);
+  int64_t result = nr1 * nr2;
+
   reg[34] = static_cast<uint32_t>(result);
   reg[33] = static_cast<uint32_t>(result >> 32);
 }
 
 void multu(const int &r1, const int &r2, uint32_t reg[]) { // unsigned multiplication
-  uint32_t ur1 = static_cast<uint32_t>(r1);
-  uint32_t ur2 = static_cast<uint32_t>(r2);
+  uint64_t ur1 = static_cast<uint32_t>(r1);
+  uint64_t ur2 = static_cast<uint32_t>(r2);
   uint64_t result = ur1 * ur2;
+  
   reg[34] = static_cast<uint32_t>(result); // LO
   reg[33] = static_cast<uint32_t>(result >> 32); // HI
 }
 
 void div(const int &r1, const int &r2, uint32_t reg[]) { // isgned division
-  reg[33] = r1 / r2;
-  reg[34] = r1 % r2;
+  reg[34] = r1 / r2;
+  reg[33] = r1 % r2;
 }
 
 void divu(const int &r1, const int &r2, uint32_t reg[]) { // unsigned division
   uint32_t ur1 = static_cast<uint32_t>(r1);
   uint32_t ur2 = static_cast<uint32_t>(r2);
-  reg[33] = ur1 / ur2;
-  reg[34] = ur1 % ur2;
+  reg[34] = ur1 / ur2;
+  reg[33] = ur1 % ur2;
 }
 
 int add(const int &r1, const int &r2) { // signed addition
@@ -764,7 +810,7 @@ int add(const int &r1, const int &r2) { // signed addition
   if ((r1 > 0) && (r2 > 0) && (result < 0)) { // checking for overflows
     exit(-10);
   }
-  else if ((r1 < 0) && (r2 < 0) && (result > 0)) {
+  else if ((r1 < 0) && (r2 < 0) && (result >= 0)) {
     exit(-10);
   }
   else {
@@ -779,11 +825,10 @@ int addu(const int &r1, const int &r2) { // unsigned addition
 int sub(const int &r1, const int &r2) { // signed subtraction
   int nr2 = -r2; // negating the second number
   int result = r1 + nr2;
-
-  if ((r1 > 0) && (nr2 > 0) && (result < 0)) { // checking for overflows
+  if ((r1 > 0) &&(nr2 > 0)&& (result <= 0)) { // checking for overflows
     exit(-10);
   }
-  else if ((r1 < 0) && (nr2 < 0) && (result > 0)) {
+  else if ((r1 < 0 )&& (nr2 < 0) && (result >= 0)) {
     exit(-10);
   }
   else {
@@ -837,12 +882,11 @@ int sltu(const int &r1, const int &r2) { // set on less than unsigned
 
 uint32_t lw(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem){
 
-  uint32_t address = r1 + offset;
+  uint32_t address = r1 + static_cast<int16_t>(offset);
   if(address & 0b11 != 0){
     exit(-11);
   }
-
-  if((address >= IMEM_OFFSET) && (address < IMEM_OFFSET + IMEM_LENGTH - 3)){
+  if((address >= IMEM_OFFSET) && (address <= (IMEM_OFFSET + IMEM_LENGTH - 3))){
     return instMem[(address-IMEM_OFFSET)/4];
   }
   else if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH - 3)){
@@ -860,7 +904,7 @@ uint32_t lw(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMe
 }
 
 void sw(const int &r1, const int&r2, const uint32_t &offset, std::vector<uint32_t>&dataMem){
-  uint32_t address = r1 + offset;
+  uint32_t address = r1 + static_cast<int16_t>(offset);
 
   if(address & 0b11 != 0){ // checking if the memory location is divisible by 4
     exit(-11);
@@ -869,7 +913,7 @@ void sw(const int &r1, const int&r2, const uint32_t &offset, std::vector<uint32_
     dataMem[(address-DATA_OFFSET)/4] = r2;
   }
   else if(address == 0x30000004){
-    char response = r2;
+    char response = r2&0xFF;
     std::cout << response;
   }
   else{ // exits with an error if attempting to write to locations other than data memory
@@ -894,7 +938,7 @@ int j(const uint32_t &instr, const int& pc, uint32_t reg[]){
 }
 
 int jal(const uint32_t &instr, const int& pc, uint32_t reg[]){
-    reg[30] = (pc*4 + IMEM_OFFSET) + 4;
+
     uint32_t target = (instr&0x3FFFFFF)<<2;
     target += ((pc*4)+IMEM_OFFSET) & 0xF0000000;
     if(target == 0){
@@ -910,12 +954,20 @@ int jal(const uint32_t &instr, const int& pc, uint32_t reg[]){
 }
 
 int jalr(const int &r1,const int &dest,const int&pc,  uint32_t reg[]){
-  reg[dest] = (pc*4 + IMEM_OFFSET) + 4;
   jr(r1,reg);
 }
 
 int addI(const int &r1, const int& imm){
-  return (r1 + imm);
+  int result = r1 + static_cast<int16_t>(imm);
+  if ((r1 > 0) && (imm > 0) && (result < 0)) { // checking for overflows
+    exit(-10);
+  }
+  else if ((r1 < 0) && (static_cast<int16_t>(imm) <0) && (result >= 0)) {
+    exit(-10);
+  }
+  else {
+    return result;
+  }
 }
 
 int orI(const int &r1, const int& imm){
@@ -924,14 +976,14 @@ int orI(const int &r1, const int& imm){
 
 int beq(int r1, int r2, int imm){
   if(r1 == r2){
-    return imm;
+    return static_cast<int16_t>(imm);
   }
   else return 1;
 }
 
 int bgez(int r1, int imm){
   if(r1 >= 0){
-    return imm;
+    return static_cast<int16_t>(imm);
   }
   else{
     return 1;
@@ -940,9 +992,8 @@ int bgez(int r1, int imm){
 
 int bgezal(int r1, int imm, uint32_t reg[], const int pc){
   //double check if next line should be in the if
-  reg[31] = pc+1;
   if(r1 >= 0){
-    return imm;
+    return static_cast<int16_t>(imm);
   }
   else{
     return 1;
@@ -951,7 +1002,7 @@ int bgezal(int r1, int imm, uint32_t reg[], const int pc){
 
 int bgtz(int r1, int imm){
   if(r1 > 0){
-    return imm;
+    return static_cast<int16_t>(imm);
   }
   else{
     return 1;
@@ -960,7 +1011,7 @@ int bgtz(int r1, int imm){
 
 int blez(int r1, int imm){
   if(r1 <= 0){
-    return imm;
+    return static_cast<int16_t>(imm);
   }
   else{
     return 1;
@@ -969,7 +1020,7 @@ int blez(int r1, int imm){
 
 int bltz(int r1, int imm){
   if(r1 < 0){
-    return imm;
+    return static_cast<int16_t>(imm);
   }
   else{
     return 1;
@@ -978,9 +1029,9 @@ int bltz(int r1, int imm){
 
 int bltzal(int r1, int imm, uint32_t reg[], const int pc){
   //double check if next line should be in the if
-  reg[31] = pc+1;
+
   if(r1 < 0){
-    return imm;
+    return static_cast<int16_t>(imm);
   }
   else{
     return 1;
@@ -989,7 +1040,7 @@ int bltzal(int r1, int imm, uint32_t reg[], const int pc){
 
 int bne(int r1, int r2, int imm){
   if(r1 != r2){
-    return imm;
+    return static_cast<int16_t>(imm);
   }
   else return 1;
 }
@@ -999,7 +1050,7 @@ int bne(int r1, int r2, int imm){
 
 int addIU(const int &r1, const int& imm){
 
-  return (r1 + imm);
+  return (r1 + static_cast<int16_t>(imm));
 
 }
 int andI(const int &r1, const int& imm){
@@ -1010,17 +1061,17 @@ int andI(const int &r1, const int& imm){
 
 uint32_t lb(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem){
 
-  uint32_t address = r1 + offset;
+  uint32_t address = r1 + static_cast<int16_t>(offset);
 
   if((address >= IMEM_OFFSET) && (address < IMEM_OFFSET + IMEM_LENGTH)){
     uint32_t word = instMem[(address-IMEM_OFFSET)/4];
     uint8_t wmask =(word >>(8*(3-((address-IMEM_OFFSET)%4))));
-    return(static_cast<uint32_t>(0xFF & wmask));
+    return(static_cast<int8_t>(0xFF & wmask));
   }
   else if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH)){
     uint32_t word = dataMem[(address-DATA_OFFSET)/4];
     uint8_t wmask =(word >>(8*(3-((address-DATA_OFFSET)%4))));
-    return(static_cast<uint32_t>(0xFF & wmask));
+    return(static_cast<int8_t>(0xFF & wmask));
   }
   else if(address == 0x30000000){
     char response;
@@ -1034,7 +1085,7 @@ uint32_t lb(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMe
 }
 uint32_t lbu(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem){
 
-  uint32_t address = r1 + offset;
+  uint32_t address = r1 + static_cast<int16_t>(offset);
 
   if((address >= IMEM_OFFSET) && (address < IMEM_OFFSET + IMEM_LENGTH)){
     uint32_t word = instMem[(address-IMEM_OFFSET)/4];
@@ -1059,19 +1110,24 @@ uint32_t lbu(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instM
 
 uint32_t lh(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem){
 
-  uint32_t address = r1 + offset;
+  uint32_t address = r1 + static_cast<int16_t>(offset);
+
   if(address & 0b1 != 0){
     exit(-11);
   }
   if((address >= IMEM_OFFSET) && (address < IMEM_OFFSET + IMEM_LENGTH)){
+    int shiftBy = 8*(2-((address-IMEM_OFFSET)%4));
     uint32_t word = instMem[(address-IMEM_OFFSET)/4];
-    uint16_t wmask =(word >>(16*(1-((address-IMEM_OFFSET)%2))));
-    return(static_cast<uint32_t>(0xFFFF & wmask));
+    uint16_t wmask =(word >>(shiftBy));
+    int result =static_cast<int16_t>(0xFFFF & wmask);
+    return(result);
   }
   else if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH)){
+    int shiftBy = 8*(2-((address-DATA_OFFSET)%4));
     uint32_t word = dataMem[(address-DATA_OFFSET)/4];
-    uint8_t wmask =(word >>(16*(1-((address-DATA_OFFSET)%2))));
-    return(static_cast<uint32_t>(0xFFFF & wmask));
+    int wmask =(word >>(shiftBy));
+    int result =static_cast<int16_t>(0xFFFF & wmask);
+    return(result);
   }
   else if(address == 0x30000000){
     char response;
@@ -1085,19 +1141,21 @@ uint32_t lh(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMe
 }
 
 uint32_t lhu(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem){
+  uint32_t address = r1 + static_cast<int16_t>(offset);
 
-  uint32_t address = r1 + offset;
   if(address & 0b1 != 0){
     exit(-11);
   }
   if((address >= IMEM_OFFSET) && (address < IMEM_OFFSET + IMEM_LENGTH)){
+    int shiftBy = 8*(2-((address-IMEM_OFFSET)%4));
     uint32_t word = instMem[(address-IMEM_OFFSET)/4];
-    uint16_t wmask =(word >>(16*(1-((address-IMEM_OFFSET)%2))));
+    uint16_t wmask =(word >>(shiftBy));
     return(0xFFFF & wmask);
   }
   else if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH)){
+    int shiftBy = 8*(2-((address-IMEM_OFFSET)%4));
     uint32_t word = dataMem[(address-DATA_OFFSET)/4];
-    uint8_t wmask =(word >>(16*(1-((address-DATA_OFFSET)%2))));
+    uint16_t wmask =(word >>(shiftBy));
     return(0xFFFF & wmask);
   }
   else if(address == 0x30000000){
@@ -1116,18 +1174,18 @@ int lui( const int& imm){
 
 }
 
-uint32_t lwr(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem){
+uint32_t lwr(const int &r1, const int &r2,const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem){
 
-  uint32_t address = r1 + offset;
-  int align = address%4;
+  uint32_t address = r1 + static_cast<int16_t>(offset);
+  int align;
   uint32_t word;
-
   if((address >= IMEM_OFFSET) && (address < IMEM_OFFSET + IMEM_LENGTH)){
     word = instMem[(address-IMEM_OFFSET)/4];
-
+    align = (address-IMEM_OFFSET)%4;
   }
   else if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH)){
     word = dataMem[(address-DATA_OFFSET)/4];
+    align = (address-DATA_OFFSET)%4;
   }
   else if(address == 0x30000000){
     char response;
@@ -1138,28 +1196,38 @@ uint32_t lwr(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instM
     std::exit(-11);
   }
 
-  uint32_t mask = 0xFF000000;
-  uint32_t result = 0;
-    for (int i = 0; i < align+1; i++){
-      result = (mask & word) | result;
-      mask = mask >> 8;
-    }
+  uint32_t result = r2;
+
+  if(align == 0){
+    return ((result & 0xFFFFFF00)+ (word >>24));
+  }
+  else if(align == 1){
+    return ((result & 0xFFFF0000)+ (word >>16));
+  }
+  else if (align == 2){
+    return ((result & 0xFF000000)+ (word >>8));
+  }
+  else{
+    return (word);
+  }
   return(result);
 
 }
 
-uint32_t lwl(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem){
+uint32_t lwl(const int &r1, const int &r2, const uint32_t &offset, std::vector<uint32_t>& instMem, std::vector<uint32_t>&dataMem){
 
-  uint32_t address = r1 + offset;
-  int align = address%4;
+  uint32_t address = r1 + static_cast<int16_t>(offset);
+  int align;
+  std::cerr<<"Align: "<<align<<std::endl;
   uint32_t word;
 
   if((address >= IMEM_OFFSET) && (address < IMEM_OFFSET + IMEM_LENGTH)){
     word = instMem[(address-IMEM_OFFSET)/4];
-
+    align = (address-IMEM_OFFSET)%4;
   }
   else if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH)){
     word = dataMem[(address-DATA_OFFSET)/4];
+    align = (address-DATA_OFFSET)%4;
   }
   else if(address == 0x30000000){
     char response;
@@ -1170,26 +1238,33 @@ uint32_t lwl(const int &r1, const uint32_t &offset, std::vector<uint32_t>& instM
     std::exit(-11);
   }
 
-  uint32_t mask = 0xFF;
-  uint32_t result = 0;
-    for (int i = 0; i < align+1; i++){
-      result = (mask & word) | result;
-      mask = mask << 8;
-    }
-  return(result);
+  uint32_t result = r2;
+
+  if(align == 0){
+    return word;
+  }
+  else if(align == 1){
+    return ((result & 0xFF)+ (word <<8));
+  }
+  else if (align == 2){
+    return ((result & 0xFFFF)+ (word <<16));
+  }
+  else{
+    return ((result & 0xFFFFFF)+ (word <<24));
+  }
 
 }
 
 void sb(const int &r1, const int&r2, const uint32_t &offset, std::vector<uint32_t>&dataMem){
 
-  uint32_t address = r1 + offset;
-  int align = 8*(3- (address%4));
-  if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH - 1)){
+  uint32_t address = r1 + static_cast<int16_t>(offset);
+  int align = 8*(3- ((address- DATA_OFFSET)%4));
+  if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH)){
     uint32_t target = dataMem[(address-DATA_OFFSET)/4] & ~(0xFF << align);
-    dataMem[(address-DATA_OFFSET)/4] = target|((r2 & 0xFF)<<offset);
+    dataMem[(address-DATA_OFFSET)/4] = target +((r2 & 0xFF)<<align);
   }
   else if(address == 0x30000004){
-    char response = r2;
+    char response = r2&0xFF;
     std::cout<< response;
   }
   else{
@@ -1200,14 +1275,18 @@ void sb(const int &r1, const int&r2, const uint32_t &offset, std::vector<uint32_
 
 void sh(const int &r1, const int&r2, const uint32_t &offset, std::vector<uint32_t>&dataMem){
 
-  uint32_t address = r1 + offset;
-  int align = 16* (2-(address%2));
+  uint32_t address = r1 + static_cast<int16_t>(offset);
+
+  if(address & 0b1 != 0){
+    exit(-11);
+  }
+  int align = 8*(2-((address-DATA_OFFSET)%4));
   if((address >= DATA_OFFSET) && (address < DATA_OFFSET + DATA_LENGTH - 1)){
-    uint32_t target = dataMem[(address-DATA_OFFSET)/4] & ~(0xFF << align);
-    dataMem[(address-DATA_OFFSET)/4] = target|((r2 & 0xFF)<<offset);
+    uint32_t target = dataMem[(address-DATA_OFFSET)/4] & ~(0xFFFF << align);
+    dataMem[(address-DATA_OFFSET)/4] = target|((r2 & 0xFFFF)<<align);
   }
   else if(address == 0x30000004){
-    char response = r2;
+    char response = r2&0xFF;
     std::cout<< response;
   }
   else{
@@ -1217,7 +1296,7 @@ void sh(const int &r1, const int&r2, const uint32_t &offset, std::vector<uint32_
 }
 
 int slti(int r1, int imm){
-  if(r1 < imm){
+  if(r1 < static_cast<int16_t>(imm)){
     return 1;
   }
   else{
@@ -1240,3 +1319,10 @@ int xorI(const int &r1, const int& imm){
 //Qs : how do you jump to 0 if you add PC offset each time!!?
 //After delay, after jump, do you add +4 to pc before finding next instruction
 //if next instruction after jalr is a jalr, is the first destination still put into register
+
+//lh, addI
+
+//need to change all offsets to signed
+
+//Double check after test:
+//sllvh
