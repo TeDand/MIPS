@@ -1,12 +1,11 @@
-# 10
+# 1
 
-ori $2, $0, 0x0007
-sub $3, $0, $2
-bltzal $3, and
+ori $2, $0, 0x1
+lui $3, 0xF000
+bltzal $3, end
 nop
-jr $0
+ori $2, $0, 0x00dd
+end: jr $0
 nop
-and: addi $2, 0x0003
-jr $31
 
-# basic functionality
+# check if branch on less than
