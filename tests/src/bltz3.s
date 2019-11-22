@@ -1,4 +1,7 @@
 # 221
+#
+#
+# Freddie
 
 lui $2, 0x00ff
 sub $3, $0, $2

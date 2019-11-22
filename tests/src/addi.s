@@ -1,4 +1,7 @@
 # 27
+#
+#
+# Freddie
 
 addi $3, $0, 0x7
 addi $2, $3, 0x14

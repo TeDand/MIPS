@@ -1,4 +1,7 @@
 # 7
+#
+#
+# Freddie
 
 ori $2, $0, 0x07
 bne $0, $2, end

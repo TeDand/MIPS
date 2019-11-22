@@ -1,4 +1,7 @@
 # 0
+#
+#
+# Freddie
 
 lui $3, 0x7fff
 ori $3, $3, 0xffff

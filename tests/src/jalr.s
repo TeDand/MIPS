@@ -1,15 +1,17 @@
 # 4
+#
+#
+# Freddie
 
 lui $3, 0x1000
-<<<<<<< HEAD
 addi $3, $3, 0x0020
 jalr $4, $3
 addi $2, $2, 0x0001
-=======
 addi $3, 0x0020
-jalr add, $4
+lui $5 0x1000
+ori $5, $5, 0x002c
+jalr $4, $5
 addi $2, 0x0001
->>>>>>> d1671fe5ee43d7d0bae9bc66b3efebf8d30954c1
 end: jr $0
 nop
 add: addi $2, $2, 0x0003

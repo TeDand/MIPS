@@ -1,4 +1,7 @@
 # 2
+#
+#
+# Freddie
 
 lui $3, 0xF000
 ori $2, $0, 0x1

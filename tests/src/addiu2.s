@@ -1,5 +1,7 @@
 # 255
-
+#
+#
+# Tejas
 lui $3, 0x8000
 addiu $2, $3, 0xffff
 jr $0

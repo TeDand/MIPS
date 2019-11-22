@@ -1,5 +1,7 @@
 # 246
-
+#
+#
+# Freddie
 lui $3, 0x9900
 lui $4, 0xbb00
 add $2, $3, $4

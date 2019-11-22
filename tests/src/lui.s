@@ -1,4 +1,7 @@
 # 4
+#
+#
+# Freddie
 
 lui $2, 0x4F
 srl $2, $2, 0x14

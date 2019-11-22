@@ -1,4 +1,8 @@
 # 255
+#
+#
+# Freddie
+
 lui $4, 0x2000
 lui $3, 0x1124
 ori $2, $2, 0xFFFF

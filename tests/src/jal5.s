@@ -1,9 +1,11 @@
-# 12
+# 8
+#
+#
+# Freddie
 
-ori $2, $0, 0x0007
 jal add
-add $2, $31,$0
-add: addi $2,$0, 0x0003
-jr $0
+add $2, $31, $0
+addi $2, $2, 0x0001
+add: jr $0
 
 # checking when link register written to

@@ -14,17 +14,25 @@ COUNT=0
 for k in tests/bin/*.bin; do
 	TEST=${k:10}
 	TEST=${TEST::-4}
-	./"$@" ./"$k"
-	RETCODE=$? ;
+
 	EXP=$(head -n 1 tests/src/"$TEST".s)
 	EXP=${EXP:2}
+	EXP_OUT=$(head -n 2 tests/src/"$TEST".s | tail -n 1)
+	EXP_OUT=${EXP_OUT:2}
+	IN=$(head -n 3 tests/src/"$TEST".s | tail -n 1)
+	IN=${IN:2}
+	AUT=$(head -n 4 tests/src/"$TEST".s | tail -n 1)
+	AUT=${AUT:2}
 	DESC=$(tail -n 1 tests/src/"$TEST".s)
 	DESC=${DESC:2}
+	SIM_OUT=$(echo "$IN" | ./"$@" ./"$k")
+	RETCODE=$?
 
-	if [[ "$RETCODE" == "$EXP" ]] ; then
-		echo -e ""$COUNT" , "$TEST" , ${GREEN}PASS${NC} , author , expected :  "$EXP" \t actual :  "$RETCODE" \t description :  "$DESC""
+
+	if [[ "$RETCODE" == "$EXP" && "$SIM_OUT" == "$EXP_OUT" ]] ; then
+		echo -e ""$COUNT" , "$TEST" , ${GREEN}PASS${NC} , "$AUT" , expected :  "$EXP" \t actual :  "$RETCODE" \t description :  "$DESC""
 	else
-		echo -e ""$COUNT" , "$TEST" , ${RED}FAIL${NC} , author , expected :  "$EXP" \t actual :  "$RETCODE" \t description :  "$DESC""
+		echo -e ""$COUNT" , "$TEST" , ${RED}FAIL${NC} , "$AUT" , expected :  "$EXP" \t actual :  "$RETCODE" \t description :  "$DESC""
 	fi
 	COUNT=$(("$COUNT" + 1))
 
