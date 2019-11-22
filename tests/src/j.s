@@ -1,6 +1,5 @@
 # 11
 
-.set noreorder
 ori $2, $0, 0x0007
 j add
 addi $2, $2, 0x0001
