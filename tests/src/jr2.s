@@ -1,5 +1,5 @@
 # 245
-.set noreorder
+
 lui $3, 0x1100
 ori $2, $0, 0x0012
 jr	$3

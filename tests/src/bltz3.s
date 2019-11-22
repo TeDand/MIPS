@@ -1,6 +1,5 @@
 # 221
 
-.set noreorder
 lui $2, 0x00ff
 sub $3, $0, $2
 bltz $3, end

@@ -1,6 +1,5 @@
 # 221
 
-.set noreorder
 ori $2, $0, 0x0007
 bgtz $2, end
 ori $2, $0, 0x00dd

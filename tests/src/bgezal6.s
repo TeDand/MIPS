@@ -1,6 +1,5 @@
 # 4
 
-.set noreorder
 ori $2, $0, 0x0007
 bgezal $2, add
 ori $2, $0, 0x0001

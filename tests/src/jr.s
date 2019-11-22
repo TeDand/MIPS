@@ -1,5 +1,5 @@
 # 2
-.set noreorder
+
 lui $3, 0x1000
 ori $2, $0, 0x01
 ori $3, $3, 0x18
